@@ -8,14 +8,15 @@ import midi_scan
 from joblib import Parallel,delayed
 from scipy.stats import norm 
 import cupy as cp 
-import chainer
+#import chainer
+
 def create_genom(length):
     genom_list =[]
     for i in range(length):
         genom_list.append(random.uniform(-1,1))
     return ga.genom(genom_list)
 
-def evaluation(ga,Original_data,Practice_data):
+def evaluation(ga,Original_data,Practice_data,Num):
     filter_cpu = np.array(ga.getGenom())
 
     #GPUで使えるデータの形にする
@@ -30,7 +31,7 @@ def evaluation(ga,Original_data,Practice_data):
     left_dot = left_dot.T - Practice_data
     left_dot = np.abs(left_dot)
 
-    return np.sum(left_dot)
+    return np.sum(left_dot),Num
 
 def select_parents(ga,Parents_Number):
     random.shuffle(ga)
@@ -72,9 +73,12 @@ def Genetic(row_number,ANS,Original_data,Practice_data,MAX_GENOM_LIST,GENOM_LENG
     for i in range(MAX_GENOM_LIST):
         current_generation_individual_group.append(create_genom(GENOM_LENGTH))
     #現世代の集合を評価
-    for i in range(MAX_GENOM_LIST):
-        evaluation_result = evaluation(current_generation_individual_group[i],Original_data,Practice_data.T[row_number])
-        current_generation_individual_group[i].setEvaluation(evaluation_result)
+    evaluation_result = []
+    evaluation_result = Parallel(n_jobs=-1)(delayed(evaluation)(current_generation_individual_group[i],Original_data,Practice_data.T[row_number],i)for i in range(MAX_GENOM_LIST))
+    sort_result = sorted(evaluation_result,key=lambda u: u[1])
+    for i in range(MAX_GENOM_LIST) :
+        current_generation_individual_group[i].setEvaluation(evaluation_result[i][0]) 
+    #current_generation_individual_group[i].setEvaluation(evaluation_result)
     for count_ in range(1,MAX_GENERATION+1):  
         
         #親個体を選択
@@ -126,7 +130,7 @@ def main():
     #親世代の数
     Parents_Number = 100
     cp.cuda.set_allocator(cp.cuda.MemoryPool().malloc)
-    #Tmp=Parallel(n_jobs=1)(delayed(Genetic)(i,ANS,Original_data,Practice_data,MAX_GENOM_LIST,GENOM_LENGTH,MAX_GENERATION,Parents_Number) for i in range(Practice_y))
+    Tmp=Parallel(n_jobs=-1)(delayed(Genetic)(i,ANS,Original_data,Practice_data,MAX_GENOM_LIST,GENOM_LENGTH,MAX_GENERATION,Parents_Number) for i in range(Practice_y))
     Genetic(0,ANS,Original_data,Practice_data,MAX_GENOM_LIST,GENOM_LENGTH,MAX_GENERATION,Parents_Number)
     for i in range(Practice_y):
         ANS[Tmp[i][1]]=Tmp[i][0]
