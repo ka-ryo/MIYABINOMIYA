@@ -4,7 +4,7 @@ class genom:
     genom_list = None
     evaluation = None
 
-    def __init__(self,genom_list,evaluation=-99999):
+    def __init__(self,genom_list,evaluation=99999):
         self.genom_list = genom_list
         self.evaluation = evaluation
     

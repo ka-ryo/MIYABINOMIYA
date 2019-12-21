@@ -1,5 +1,6 @@
 import pretty_midi
 import numpy as np
+import os.path
 
 def main(midi_file_name):
     np.set_printoptions(threshold=np.inf)
@@ -16,15 +17,15 @@ def main(midi_file_name):
     #print(np.shape(midi_numpy))
 
     bool_midi_file = (midi_numpy > 0)
-    one_hot_vector_midi = (bool_midi_file.astype(np.int))
+    one_hot_vector_midi = bool_midi_file.astype(np.int)
     #print(one_hot_vector_midi.ndim)
 
     #print(one_hot_vector_midi.T)
 
     #txt保存
-    np.savetxt('{}.txt'.format(midi_file_name),one_hot_vector_midi,fmt="%2.1d")
+    np.savetxt('{}.txt'.format(os.path.splitext(midi_file_name)[0]),one_hot_vector_midi,fmt="%2.1d")
 
     return one_hot_vector_midi
 if __name__ == '__main__':
-    main("Long_test.mid")
+    main("楽譜1.mid")
     
