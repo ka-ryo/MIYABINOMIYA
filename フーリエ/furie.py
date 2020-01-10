@@ -1,7 +1,10 @@
-#coding:utf-8
-
-import numpy as np
+ # testwavemodule3.py
+ # encoding: utf-8
+ # http://nalab.mind.meiji.ac.jp/~mk/lecture/fourier-2017/testwavemodule3.py
+# これは Python 3.x 用のプログラム
+    
 import wave
+import numpy as np
 import matplotlib.pyplot as plt
 from joblib import Parallel,delayed
 from scipy.stats import norm 
@@ -9,72 +12,64 @@ import pathlib
 import os
 import re
 
-def wave_load(filename):
-    # open wave file
-    wf = wave.open(filename,'r')
-    channels = wf.getnchannels()
-
-    # load wave data
-    chunk_size = wf.getnframes()
-    amp  = (2**8) ** wf.getsampwidth() / 2
-    data = wf.readframes(chunk_size)   # バイナリ読み込み
-    data = np.frombuffer(data,'int16') # intに変換
-    data = data / amp                  # 振幅正規化
-    data = data[::channels]
-
-    return data
 
 def furie(Wave_Filename):
-    print(Wave_Filename)
-    fs = 8000.0
-    d = 1.0 / fs
-    size = 200000
-    wave1 = wave_load(os.path.basename(Wave_Filename))
-    wave2 = wave_load(os.path.basename(Wave_Filename).replace('original','practice'))
+    #ここの名前を変更
+ 
+    wfile = wave.open( (Wave_Filename), 'r')
 
-    big_size = wave1.shape[0] if wave1.shape[0] < wave2.shape[0] else wave2.shape[0]
 
-    size = size if size < big_size else big_size
-
-    dt1 = np.fft.fft(wave1[0:0+size:2000])
-    dt2 = np.fft.fft(wave2[0:0+size:2000])
-    print(size)
-    dt3 = dt2 - dt1
-    frq = np.fft.fftfreq(size,d)
+    numch = wfile.getnchannels()
+    samplewidth = wfile.getsampwidth()
+    samplerate = wfile.getframerate()
+    numsamples = wfile.getnframes()
 
     """
-    plt.subplot(1,1,1)
-    plt.title("FFT - recorder_A4")
-    plt.plot(frq,abs(dt3))
-    plt.axis([0,fs/2,0,max(abs(dt3))])
+    print("チャンネル数 = ", numch)
+    print("サンプル幅 (バイト数) = ", samplewidth)
+    print("サンプリングレート(Hz) =", samplerate)
+    print("サンプル数 =", numsamples)
+    print("録音時間 =", numsamples / samplerate)
     """
+    # すべてのフレームを読み込む (bytesオブジェクトになる)
+    buf = wfile.readframes(numsamples)
+    wfile.close()
 
-    Amp = np.abs(dt3/(size/2)) # 振幅
+    # numpy の ndarray に変換する
+    if samplewidth == 2:
+        data = np.frombuffer(buf, dtype='int16')
+        data = data / 32768.0
+    elif samplewidth == 4:
+        data = np.frombuffer(buf, dtype='int32')
+        data = data / 2147483648.0
 
-    """
-    fig, ax = plt.subplots()
-    ax.plot(dt3[1:int(size/2)], Amp[1:int(size/2)])
-    ax.set_xlabel("Freqency [Hz]")
-    ax.set_ylabel("Amplitude")
-    ax.grid()
-    #plt.show()
-    """
+    # ステレオの場合は左チャンネルだけを取り出す
+    # (0 から最後まで2つおきに、つまり 0,2,4,.. 番目を取り出す)
+    if numch == 2:
+        #l_channel = data[0::2]
+        #r_channel = data[1::2]
+        data = data[0::2]
 
-    if dt2.shape[0] != (int)(200000/2000):
-        X_0 = np.zeros(((int)(200000/2000)-dt2.shape[0]))
-        np.savetxt("Furie_Difference{}.txt".format(re.findall('_[0-9]',str(Wave_Filename))[0]),np.append(dt3,X_0))
-    else:
-        np.savetxt("Furie_Difference{}.txt".format(re.findall('_[0-9]',str(Wave_Filename))[0]),dt3)
-    
+
+    start = 0
+    N = numsamples
+    c = np.fft.fft(data[start:start+N:500])
+    c = abs(c)
+    N=c.shape[0]
+    #np.savetxt("a.txt",c)
     """
-    if size != 200000:
-        X_0 = np.zeros((200000-size))
-        np.savetxt("Furie_Difference{}.txt".format(re.findall('_[0-9]',str(Wave_Filename))[0]),np.append(dt3,X_0))
-    else:
-        np.savetxt("Furie_Difference{}.txt".format(re.findall('_[0-9]',str(Wave_Filename))[0]),dt3)
+    plt.title(Wave_Filename)
+    freqList = np.fft.fftfreq(N, d=1.0/samplerate)
+    plt.plot(freqList, c, linestyle='-')
+    plt.show()
     """
-    #plt.show()
+    return c
+
+
+
 if __name__ == "__main__":
+    #生成する差分の最大
+    N_SABUN = 500
     #originalとpracticeのパスを取得する
     first_dir = os.getcwd()
     music_name_path = pathlib.Path('Dataset').glob('*')
@@ -85,10 +80,37 @@ if __name__ == "__main__":
             Original =  list(pathlib.Path('Dataset/{}/{}/'.format(name1.name,name2.name)).glob('original*[0-9]*wav'))
             Practice =  list(pathlib.Path('Dataset/{}/{}/'.format(name1.name,name2.name)).glob('practice*[0-9]*wav'))
             Do_check =  list(pathlib.Path('Dataset/{}/{}/'.format(name1.name,name2.name)).glob('Furie*'))
-            if(len(Original) != 0 and len(Practice)):
+            if(len(Original) != 0 and len(Practice)!= 0):
                 for A_Original in Original:
                     Original_path=(os.path.dirname(A_Original))
                     os.chdir(Save_Path)
-                    furie(A_Original)    
+                    
+                    Ori=furie(os.path.basename(A_Original))
+                    Pra=furie(os.path.basename(A_Original).replace('original','practice'))
+
+                    if Ori.shape[0] > Pra.shape[0]:
+                        Zero_array = np.zeros((Ori.shape[0] - Pra.shape[0]))
+                        Pra=np.append(Pra,Zero_array)
+                    elif Ori.shape[0] < Pra.shape[0]:
+                        Zero_array = np.zeros((Pra.shape[0] - Ori.shape[0]))
+                        Ori=np.append(Ori,Zero_array)
+                    
+                    Sabun = Ori - Pra
+                    #freqList = np.fft.fftfreq(N, d=1.0/samplerate)
+                    if Sabun.shape[0] >N_SABUN:
+                        Sabun =np.resize(Sabun,N_SABUN)
+                    elif Sabun.shape[0] < N_SABUN:
+                        Zero_array = np.zeros(N_SABUN - Sabun.shape[0])
+                        Sabun = np.append(Sabun,Zero_array)
+                    np.savetxt("Furie_Difference{}.txt".format(re.findall('_[0-9]',str(os.path.basename(A_Original)))[0]),Sabun)
+                    
+                    """
+                    plt.title('sabun')
+                    plt.plot(Sabun, linestyle='-')
+                    plt.show()
+                    """
                     os.chdir(first_dir)
-    
+   
+
+
+
