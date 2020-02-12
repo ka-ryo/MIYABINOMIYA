@@ -23,14 +23,9 @@ def main(midi_file_name):
     #print(one_hot_vector_midi.T)
 
     #txt保存
-<<<<<<< HEAD
     np.savetxt('{}.txt'.format(os.path.splitext(midi_file_name)[0]),one_hot_vector_midi,fmt="%2.1d")
 
-=======
-    np.savetxt('{}.txt'.format(midi_file_name),one_hot_vector_midi,fmt="%2.1d")
-    print(one_hot_vector_midi.shape)
->>>>>>> origin/master
     return one_hot_vector_midi
 if __name__ == '__main__':
-    main("楽譜1.mid")
+    main("original_1.mid")
     
