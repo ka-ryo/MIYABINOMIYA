@@ -4,8 +4,9 @@ import os.path
 import pathlib
 
 def main(midi_file_name):
+    print(midi_file_name)
     hight = 128
-    width = 150
+    width = 300
     np.set_printoptions(threshold=np.inf)
     
     #midiデータを読み込む
@@ -14,10 +15,8 @@ def main(midi_file_name):
     #midiデータ（ピアノ）をNumpyで保存
     midi_numpy = midi_file.get_piano_roll()
 
-    if midi_numpy.shape[1] > 150 and "ori" in (str(midi_file_name)) :
-        print(os.path.splitext(midi_file_name)[0])
-        #print(midi_numpy.shape)
-    """
+    print(np.shape(midi_numpy))
+    
     if midi_numpy.shape[1] != width:
         print(width-midi_numpy.shape[1])
         zero_array = np.zeros((hight,width-midi_numpy.shape[1]))
@@ -27,19 +26,30 @@ def main(midi_file_name):
     #intへ変更
     int64_midi_numpy = midi_numpy.astype(np.int64)
 
-    print(np.shape(midi_numpy))
-
     bool_midi_file = (midi_numpy > 0)
     one_hot_vector_midi = bool_midi_file.astype(np.int)
-    #print(one_hot_vector_midi.ndim)
-    #print(one_hot_vector_midi.T)
 
+    #正方形に変形
+    #追加する奴生成
+    add_array = np.zeros([1,width])
+    for i in range(width-hight):
+        one_hot_vector_midi = np.concatenate([one_hot_vector_midi,add_array])
+
+    #練習曲の番号を取得
+    Number=(midi_file_name.parents[0]).stem
+
+    #練習曲の名前を取得
+    Name = (midi_file_name.parents[1]).stem
+
+    #オリジナルか練習か
+    kind = midi_file_name.stem
+
+    print('{}_{}_{}.txt'.format(Name,Number,kind))
     #txt保存
-    
-    np.savetxt('{}.txt'.format(os.path.splitext(midi_file_name)[0]),one_hot_vector_midi,fmt="%2.1d")
-    input()
+    np.savetxt('{}_{}_{}.txt'.format(Name,Number,kind),one_hot_vector_midi,fmt="%2d")
+
     return one_hot_vector_midi
-    """
+    
 if __name__ == '__main__':
     #originalとpracticeのパスを取得する
     first_dir = os.getcwd()
